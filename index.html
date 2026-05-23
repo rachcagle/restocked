@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Household Tracker</title>
+  <meta name="description" content="Know exactly when to restock your household essentials." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Restocked" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface2: #22223b;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0eff8;
+      --muted: #8b8aa8;
+      --accent: #7c6af7;
+      --accent-light: rgba(124,106,247,0.15);
+      --green: #4ade80;
+      --green-bg: rgba(74,222,128,0.1);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251,191,36,0.1);
+      --red: #f87171;
+      --red-bg: rgba(248,113,113,0.1);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --font: 'DM Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { background: var(--bg); }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      padding: 56px 20px 20px;
+      background: linear-gradient(180deg, var(--surface) 0%, transparent 100%);
+    }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; }
+    .app-name {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent); font-family: var(--mono);
+      margin-bottom: 4px;
+    }
+    .header h1 { font-size: 26px; font-weight: 600; line-height: 1.2; }
+    .header h1 span { color: var(--muted); font-weight: 300; }
+    .household-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 20px; padding: 6px 12px; cursor: pointer;
+      font-size: 13px; font-weight: 500; color: var(--text);
+      white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+    }
+    .household-pill svg { width: 14px; height: 14px; stroke: var(--muted); }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 0;
+      background: var(--surface); border-bottom: 0.5px solid var(--border);
+      padding: 0 20px; position: sticky; top: 0; z-index: 10;
+    }
+    .tab {
+      flex: 1; padding: 14px 0; font-size: 13px; font-weight: 500;
+      color: var(--muted); background: none; border: none; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.2s; font-family: var(--font);
+    }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    /* Main content */
+    .content { padding: 16px 20px; }
+
+    /* Reminder cards */
+    .urgency-section { margin-bottom: 24px; }
+    .urgency-label {
+      font-size: 10px; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); font-family: var(--mono);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .urgency-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .reminder-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+      transition: border-color 0.15s;
+    }
+    .reminder-card:active { transform: scale(0.99); }
+    .reminder-card.overdue { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.04); }
+    .reminder-card.soon { border-color: rgba(251,191,36,0.25); }
+
+    .r-icon { font-size: 26px; width: 36px; text-align: center; flex-shrink: 0; }
+    .r-body { flex: 1; min-width: 0; }
+    .r-name { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+    .r-sub { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .r-bar-wrap { height: 3px; background: var(--border2); border-radius: 2px; }
+    .r-bar { height: 3px; border-radius: 2px; transition: width 0.4s; }
+
+    .r-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+    .badge {
+      font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 10px;
+      font-family: var(--mono); white-space: nowrap;
+    }
+    .badge.red { background: var(--red-bg); color: var(--red); }
+    .badge.amber { background: var(--amber-bg); color: var(--amber); }
+    .badge.green { background: var(--green-bg); color: var(--green); }
+
+    .buy-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      color: var(--muted); cursor: pointer; font-size: 15px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .buy-btn:active { background: var(--accent); color: white; transform: scale(0.92); }
+
+    /* Products tab */
+    .product-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+    }
+    .product-tile {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 14px; cursor: pointer;
+      transition: all 0.15s; position: relative;
+    }
+    .product-tile.on { border-color: var(--accent); background: var(--accent-light); }
+    .product-tile:active { transform: scale(0.97); }
+    .p-icon { font-size: 24px; margin-bottom: 8px; }
+    .p-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .p-freq { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .p-check {
+      position: absolute; top: 10px; right: 10px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); display: none;
+      align-items: center; justify-content: center;
+    }
+    .product-tile.on .p-check { display: flex; }
+    .p-check svg { width: 10px; height: 10px; stroke: white; stroke-width: 2.5; }
+
+    /* Custom add */
+    .add-section {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
+    }
+    .add-label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+    .add-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    input[type=text], select {
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: var(--font); font-size: 14px; padding: 10px 12px;
+      outline: none; width: 100%;
+    }
+    input[type=text]:focus, select:focus { border-color: var(--accent); }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8aa8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .add-btn-full {
+      width: 100%; padding: 11px; border-radius: var(--radius-sm);
+      background: var(--accent); border: none; color: white;
+      font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .add-btn-full:active { opacity: 0.8; }
+
+    /* Household modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: flex; align-items: flex-end; z-index: 100;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border-radius: 24px 24px 0 0;
+      padding: 20px 24px 40px; width: 100%;
+      border: 0.5px solid var(--border2);
+      transform: translateY(20px); transition: transform 0.25s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+    .modal-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-key { font-size: 15px; }
+    .modal-counter { display: flex; align-items: center; gap: 12px; }
+    .m-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      color: var(--text); font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .m-val { font-size: 20px; font-weight: 600; min-width: 32px; text-align: center; }
+    .modal-close {
+      width: 100%; padding: 13px; border-radius: var(--radius);
+      background: var(--accent); border: none; color: white;
+      font-family: var(--font); font-size: 15px; font-weight: 500;
+      cursor: pointer; margin-top: 8px;
+    }
+
+    .empty { text-align: center; padding: 48px 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* Bought flash */
+    @keyframes buyFlash {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); background: var(--accent); color: white; }
+      100% { transform: scale(1); }
+    }
+    .buy-btn.flash { animation: buyFlash 0.3s ease; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-name">Restocked</div>
+      <h1>Your <span>shopping</span><br>reminders</h1>
+    </div>
+    <div class="household-pill" onclick="openModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span id="pill-label">2 adults</span>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" onclick="switchTab('reminders')">Reminders</button>
+  <button class="tab" onclick="switchTab('products')">Products</button>
+</nav>
+
+<div class="content">
+  <div id="tab-reminders"></div>
+  <div id="tab-products" style="display:none"></div>
+</div>
+
+<!-- Household modal -->
+<div class="modal-overlay" id="modal" onclick="e => e.target===this && closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Your household</div>
+    <div class="modal-row">
+      <span class="modal-key">Adults</span>
+      <div class="modal-counter">
+        <button class="m-btn" onclick="adj('adults',-1)">−</button>
+        <span class="m-val" id="m-adults">2</span>
+        <button class="m-btn" onclick="adj('adults',1)">+</button>
+      </div>
+    </div>
+    <div class="modal-row">
+      <span class="modal-key">Children</span>
+      <div class="modal-counter">
+        <button class="m-btn" onclick="adj('children',-1)">−</button>
+        <span class="m-val" id="m-children">0</span>
+        <button class="m-btn" onclick="adj('children',1)">+</button>
+      </div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">Done</button>
+  </div>
+</div>
+
+<script>
+const PRODUCTS = [
+  { id:'toilet-paper', name:'Toilet paper', icon:'🧻', base:7, pa:1, pc:0.7 },
+  { id:'paper-towels', name:'Paper towels', icon:'🧴', base:14, pa:1, pc:0.5 },
+  { id:'milk', name:'Milk', icon:'🥛', base:7, pa:0.5, pc:1 },
+  { id:'bread', name:'Bread', icon:'🍞', base:7, pa:0.5, pc:0.5 },
+  { id:'eggs', name:'Eggs', icon:'🥚', base:10, pa:0.5, pc:0.3 },
+  { id:'dish-soap', name:'Dish soap', icon:'🫧', base:21, pa:1, pc:0.3 },
+  { id:'laundry', name:'Laundry detergent', icon:'👕', base:28, pa:1, pc:0.8 },
+  { id:'trash-bags', name:'Trash bags', icon:'🗑️', base:14, pa:0.5, pc:0.2 },
+  { id:'toothpaste', name:'Toothpaste', icon:'🦷', base:30, pa:1, pc:1 },
+  { id:'shampoo', name:'Shampoo', icon:'🚿', base:30, pa:1, pc:0.8 },
+  { id:'hand-soap', name:'Hand soap', icon:'🧼', base:21, pa:0.7, pc:0.5 },
+  { id:'coffee', name:'Coffee', icon:'☕', base:14, pa:1, pc:0 },
+];
+
+function load() {
+  try { return JSON.parse(localStorage.getItem('hh-state') || 'null'); } catch { return null; }
+}
+function save() { localStorage.setItem('hh-state', JSON.stringify(state)); }
+
+const defaults = {
+  adults: 2, children: 0,
+  selected: ['toilet-paper','paper-towels','milk','dish-soap','laundry'],
+  custom: [],
+  lastBought: {},
+  startDate: new Date().toISOString()
+};
+
+const saved = load();
+const state = saved ? { ...defaults, ...saved } : { ...defaults };
+if (!state.startDate) state.startDate = new Date().toISOString();
+
+function allProducts() { return [...PRODUCTS, ...state.custom]; }
+
+function calcDays(p) {
+  if (p.fixedDays) return p.fixedDays;
+  const persons = state.adults * p.pa + state.children * p.pc;
+  return Math.max(3, Math.round(p.base / Math.max(0.5, persons)));
+}
+
+function formatDays(d) {
+  if (d <= 1) return 'daily';
+  if (d === 7) return 'weekly';
+  if (d < 14) return `every ${d}d`;
+  if (d === 14) return 'every 2 weeks';
+  if (d < 21) return `every ${d}d`;
+  if (d <= 31) return `every ${Math.round(d/7)} weeks`;
+  return `every ${Math.round(d/30)}mo`;
+}
+
+function getUrgency(elapsed, cycle) {
+  const r = elapsed / cycle;
+  if (r >= 1) return 'overdue';
+  if (r >= 0.72) return 'soon';
+  return 'ok';
+}
+
+function renderReminders() {
+  const now = Date.now();
+  const start = new Date(state.startDate).getTime();
+  const sel = state.selected;
+  if (!sel.length) {
+    document.getElementById('tab-reminders').innerHTML = `<div class="empty"><div class="empty-icon">🛒</div>No products tracked yet.<br>Go to Products to get started.</div>`;
+    return;
+  }
+  const items = allProducts()
+    .filter(p => sel.includes(p.id))
+    .map(p => {
+      const cycle = calcDays(p);
+      const lb = state.lastBought[p.id] ? new Date(state.lastBought[p.id]).getTime() : start;
+      const elapsed = Math.floor((now - lb) / 86400000);
+      const daysLeft = cycle - elapsed;
+      const urg = getUrgency(elapsed, cycle);
+      return { ...p, cycle, elapsed, daysLeft, urg };
+    })
+    .sort((a,b) => a.daysLeft - b.daysLeft);
+
+  const groups = { overdue: [], soon: [], ok: [] };
+  items.forEach(i => groups[i.urg].push(i));
+
+  const labels = { overdue: '🔴 Overdue', soon: '🟡 Buy soon', ok: '🟢 Well stocked' };
+  let html = '';
+  for (const [key, arr] of Object.entries(groups)) {
+    if (!arr.length) continue;
+    html += `<div class="urgency-section"><div class="urgency-label">${labels[key]}</div>`;
+    arr.forEach(p => {
+      const pct = Math.min(100, Math.round(p.elapsed / p.cycle * 100));
+      const barColor = p.urg==='overdue' ? 'var(--red)' : p.urg==='soon' ? 'var(--amber)' : 'var(--green)';
+      const badgeCls = p.urg==='overdue' ? 'red' : p.urg==='soon' ? 'amber' : 'green';
+      const badgeTxt = p.urg==='overdue' ? `${Math.abs(p.daysLeft)}d overdue` : p.urg==='soon' ? `buy in ${p.daysLeft}d` : `${p.daysLeft}d left`;
+      html += `<div class="reminder-card ${p.urg}">
+        <div class="r-icon">${p.icon||'📦'}</div>
+        <div class="r-body">
+          <div class="r-name">${p.name}</div>
+          <div class="r-sub">Restocks ${formatDays(p.cycle)}</div>
+          <div class="r-bar-wrap"><div class="r-bar" style="width:${pct}%;background:${barColor}"></div></div>
+        </div>
+        <div class="r-right">
+          <span class="badge ${badgeCls}">${badgeTxt}</span>
+          <button class="buy-btn" onclick="markBought('${p.id}',this)" aria-label="Mark ${p.name} as bought">✓</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  document.getElementById('tab-reminders').innerHTML = html;
+}
+
+function renderProducts() {
+  const sel = state.selected;
+  let grid = allProducts().map(p => {
+    const on = sel.includes(p.id);
+    return `<div class="product-tile ${on?'on':''}" onclick="toggleProduct('${p.id}')">
+      <div class="p-check"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="p-icon">${p.icon||'📦'}</div>
+      <div class="p-name">${p.name}</div>
+      <div class="p-freq">${formatDays(calcDays(p))}</div>
+    </div>`;
+  }).join('');
+
+  const addSection = `<div class="add-section">
+    <div class="add-label">Add custom product</div>
+    <div class="add-row">
+      <input type="text" id="custom-name" placeholder="Product name" />
+    </div>
+    <div class="add-row">
+      <select id="custom-freq">
+        <option value="7">Every week</option>
+        <option value="14">Every 2 weeks</option>
+        <option value="21" selected>Every 3 weeks</option>
+        <option value="30">Every month</option>
+        <option value="60">Every 2 months</option>
+        <option value="90">Every 3 months</option>
+      </select>
+    </div>
+    <button class="add-btn-full" onclick="addCustom()">+ Add product</button>
+  </div>`;
+
+  document.getElementById('tab-products').innerHTML = `<div class="product-grid">${grid}</div>${addSection}`;
+}
+
+function toggleProduct(id) {
+  const idx = state.selected.indexOf(id);
+  if (idx >= 0) state.selected.splice(idx,1); else state.selected.push(id);
+  save(); renderProducts(); updatePill();
+}
+
+function markBought(id, btn) {
+  state.lastBought[id] = new Date().toISOString();
+  btn.classList.add('flash');
+  setTimeout(() => { btn.classList.remove('flash'); renderReminders(); }, 320);
+  save();
+}
+
+function addCustom() {
+  const name = document.getElementById('custom-name').value.trim();
+  const freq = parseInt(document.getElementById('custom-freq').value);
+  if (!name) return;
+  const id = 'custom-' + Date.now();
+  state.custom.push({ id, name, icon:'📦', fixedDays: freq });
+  state.selected.push(id);
+  save(); renderProducts(); updatePill();
+}
+
+function updatePill() {
+  const n = state.adults + state.children;
+  document.getElementById('pill-label').textContent = `${state.adults} adult${state.adults!==1?'s':''}${state.children?' + '+state.children+' kid'+(state.children!==1?'s':''):''}`;
+  document.getElementById('m-adults').textContent = state.adults;
+  document.getElementById('m-children').textContent = state.children;
+}
+
+function adj(key, d) {
+  state[key] = Math.max(key==='adults'?1:0, state[key]+d);
+  save(); updatePill(); renderReminders(); renderProducts();
+}
+
+function openModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+let activeTab = 'reminders';
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='reminders')||(i===1&&tab==='products')));
+  document.getElementById('tab-reminders').style.display = tab==='reminders'?'':'none';
+  document.getElementById('tab-products').style.display = tab==='products'?'':'none';
+  if (tab==='products') renderProducts();
+}
+
+updatePill(); renderReminders();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
