@@ -222,6 +222,96 @@
       100% { transform: scale(1); }
     }
     .buy-btn.flash { animation: buyFlash 0.3s ease; }
+
+    /* Toggle switch */
+    .toggle {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: var(--border2); border: none; cursor: pointer;
+      position: relative; transition: background 0.2s; flex-shrink: 0; padding: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: white; transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* Time input */
+    input[type=time] {
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: var(--mono); font-size: 14px; padding: 8px 12px;
+      outline: none; width: auto; color-scheme: dark;
+    }
+    input[type=time]:focus { border-color: var(--accent); }
+
+    /* Modal extras */
+    .modal-divider { height: 0.5px; background: var(--border); margin: 16px 0; }
+    .modal-section-label {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); font-family: var(--mono);
+      margin-bottom: 14px;
+    }
+    .notif-note { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+    .notif-perm-btn {
+      width: 100%; padding: 10px; border-radius: var(--radius-sm);
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      color: var(--text); font-family: var(--font); font-size: 14px; cursor: pointer;
+    }
+    .notif-perm-btn:active { opacity: 0.7; }
+
+    /* Shopping list tab */
+    .list-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .list-add-urgent {
+      flex: 1; padding: 10px 14px; border-radius: var(--radius-sm);
+      background: var(--accent); border: none; color: white;
+      font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .list-add-urgent:active { opacity: 0.8; }
+    .list-action-btn {
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      color: var(--text); font-family: var(--font); font-size: 14px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .list-action-btn:active { opacity: 0.7; }
+    .list-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px;
+      transition: opacity 0.2s;
+    }
+    .list-item.checked { opacity: 0.45; }
+    .list-item.checked .list-name { text-decoration: line-through; color: var(--muted); }
+    .list-check {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1.5px solid var(--border2); background: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: white; font-size: 13px; transition: all 0.15s;
+    }
+    .list-item.checked .list-check { background: var(--accent); border-color: var(--accent); }
+    .list-icon { font-size: 22px; flex-shrink: 0; }
+    .list-name { flex: 1; font-size: 15px; font-weight: 500; }
+    .list-remove {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: none; border: 0.5px solid var(--border2);
+      color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .list-remove:active { background: var(--red-bg); color: var(--red); border-color: rgba(248,113,113,0.4); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: calc(24px + env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%) translateY(16px);
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 20px; padding: 10px 18px;
+      font-size: 14px; font-weight: 500; color: var(--text);
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; z-index: 200; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
@@ -242,11 +332,13 @@
 <nav class="tabs">
   <button class="tab active" onclick="switchTab('reminders')">Reminders</button>
   <button class="tab" onclick="switchTab('products')">Products</button>
+  <button class="tab" onclick="switchTab('list')">List</button>
 </nav>
 
 <div class="content">
   <div id="tab-reminders"></div>
   <div id="tab-products" style="display:none"></div>
+  <div id="tab-list" style="display:none"></div>
 </div>
 
 <!-- Household modal -->
@@ -270,9 +362,14 @@
         <button class="m-btn" onclick="adj('children',1)">+</button>
       </div>
     </div>
+    <div class="modal-divider"></div>
+    <div class="modal-section-label">Notifications</div>
+    <div id="notif-section"></div>
     <button class="modal-close" onclick="closeModal()">Done</button>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const PRODUCTS = [
@@ -300,7 +397,11 @@ const defaults = {
   selected: ['toilet-paper','paper-towels','milk','dish-soap','laundry'],
   custom: [],
   lastBought: {},
-  startDate: new Date().toISOString()
+  startDate: new Date().toISOString(),
+  shoppingList: [],
+  notifyEnabled: false,
+  notifyTime: '09:00',
+  lastNotifiedDate: null,
 };
 
 const saved = load();
@@ -451,22 +552,224 @@ function adj(key, d) {
   save(); updatePill(); renderReminders(); renderProducts();
 }
 
-function openModal() { document.getElementById('modal').classList.add('open'); }
+function openModal() { document.getElementById('modal').classList.add('open'); renderNotifSection(); }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
 
 let activeTab = 'reminders';
 function switchTab(tab) {
   activeTab = tab;
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='reminders')||(i===1&&tab==='products')));
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',
+    (i===0&&tab==='reminders')||(i===1&&tab==='products')||(i===2&&tab==='list')
+  ));
   document.getElementById('tab-reminders').style.display = tab==='reminders'?'':'none';
   document.getElementById('tab-products').style.display = tab==='products'?'':'none';
+  document.getElementById('tab-list').style.display = tab==='list'?'':'none';
   if (tab==='products') renderProducts();
+  if (tab==='list') renderList();
 }
 
-updatePill(); renderReminders();
+// ── Shopping list ────────────────────────────────────────────
 
+function getUrgentItems() {
+  const now = Date.now();
+  const start = new Date(state.startDate).getTime();
+  return allProducts()
+    .filter(p => state.selected.includes(p.id))
+    .map(p => {
+      const cycle = calcDays(p);
+      const lb = state.lastBought[p.id] ? new Date(state.lastBought[p.id]).getTime() : start;
+      const elapsed = Math.floor((now - lb) / 86400000);
+      return { ...p, urg: getUrgency(elapsed, cycle) };
+    })
+    .filter(p => p.urg === 'overdue' || p.urg === 'soon');
+}
 
+function renderList() {
+  const inList = new Set(state.shoppingList.map(i => i.id));
+  const canAdd = getUrgentItems().filter(i => !inList.has(i.id));
+  const { shoppingList } = state;
+
+  let actions = '';
+  if (canAdd.length) {
+    actions += `<button class="list-add-urgent" onclick="addUrgentToList()">+ Add ${canAdd.length} urgent item${canAdd.length>1?'s':''}</button>`;
+  }
+  if (shoppingList.some(i => i.checked)) {
+    actions += `<button class="list-action-btn" onclick="clearChecked()">Clear checked</button>`;
+  }
+  if (shoppingList.length) {
+    actions += `<button class="list-action-btn" onclick="shareList()">Share</button>`;
+  }
+
+  const actionsHtml = actions ? `<div class="list-actions">${actions}</div>` : '';
+
+  let itemsHtml = '';
+  if (!shoppingList.length) {
+    itemsHtml = `<div class="empty"><div class="empty-icon">🛒</div>Your list is empty.<br>${canAdd.length ? 'Tap above to add urgent items.' : 'Items due soon will appear here.'}</div>`;
+  } else {
+    shoppingList.forEach((item, idx) => {
+      itemsHtml += `<div class="list-item ${item.checked?'checked':''}">
+        <button class="list-check" onclick="toggleListItem(${idx})">${item.checked?'✓':''}</button>
+        <span class="list-icon">${item.icon||'📦'}</span>
+        <span class="list-name">${item.name}</span>
+        <button class="list-remove" onclick="removeListItem(${idx})" aria-label="Remove">×</button>
+      </div>`;
+    });
+  }
+
+  document.getElementById('tab-list').innerHTML = actionsHtml + itemsHtml;
+}
+
+function addUrgentToList() {
+  const inList = new Set(state.shoppingList.map(i => i.id));
+  const toAdd = getUrgentItems().filter(i => !inList.has(i.id));
+  toAdd.forEach(p => state.shoppingList.push({ id: p.id, name: p.name, icon: p.icon||'📦', checked: false }));
+  save(); renderList();
+}
+
+function toggleListItem(idx) {
+  state.shoppingList[idx].checked = !state.shoppingList[idx].checked;
+  save(); renderList();
+}
+
+function removeListItem(idx) {
+  state.shoppingList.splice(idx, 1);
+  save(); renderList();
+}
+
+function clearChecked() {
+  state.shoppingList = state.shoppingList.filter(i => !i.checked);
+  save(); renderList();
+}
+
+function shareList() {
+  const lines = state.shoppingList
+    .filter(i => !i.checked)
+    .map(i => `${i.icon} ${i.name}`);
+  const checked = state.shoppingList.filter(i => i.checked).map(i => `${i.icon} ${i.name}`);
+  if (checked.length) lines.push('', '✓ ' + checked.join(', ✓ '));
+  const text = 'Shopping list (Restocked)\n\n' + lines.join('\n');
+  if (navigator.share) {
+    navigator.share({ title: 'Shopping list', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+  }
+}
+
+// ── Notifications ─────────────────────────────────────────────
+
+function renderNotifSection() {
+  const el = document.getElementById('notif-section');
+  if (!el) return;
+  const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+
+  if (perm === 'unsupported') {
+    el.innerHTML = `<p class="notif-note">Push notifications are not supported in this browser.</p>`;
+    return;
+  }
+  if (perm === 'denied') {
+    el.innerHTML = `<p class="notif-note">Notifications are blocked. Enable them in your browser settings to use this feature.</p>`;
+    return;
+  }
+  if (perm === 'default') {
+    el.innerHTML = `<p class="notif-note">Get a daily reminder when items are overdue or running low.</p>
+      <button class="notif-perm-btn" onclick="requestNotifPermission()">Enable notifications</button>`;
+    return;
+  }
+  // granted
+  const on = state.notifyEnabled;
+  el.innerHTML = `
+    <div class="modal-row">
+      <span class="modal-key">Daily reminder</span>
+      <button class="toggle ${on?'on':''}" onclick="toggleNotify()" aria-label="Toggle notifications"></button>
+    </div>
+    ${on ? `<div class="modal-row">
+      <span class="modal-key">Remind me at</span>
+      <input type="time" value="${state.notifyTime}" onchange="setNotifyTime(this.value)" />
+    </div>` : ''}`;
+}
+
+async function requestNotifPermission() {
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    state.notifyEnabled = true;
+    save();
+    registerPeriodicSync();
+  }
+  renderNotifSection();
+}
+
+function toggleNotify() {
+  state.notifyEnabled = !state.notifyEnabled;
+  save();
+  if (state.notifyEnabled) registerPeriodicSync();
+  renderNotifSection();
+}
+
+function setNotifyTime(val) {
+  state.notifyTime = val;
+  save();
+}
+
+async function registerPeriodicSync() {
+  if (!('serviceWorker' in navigator) || !('periodicSync' in ServiceWorkerRegistration.prototype)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.periodicSync.register('restock-daily', { minInterval: 24 * 60 * 60 * 1000 });
+  } catch (_) {}
+}
+
+async function fireSmartNotification() {
+  if (Notification.permission !== 'granted') return;
+  const urgent = getUrgentItems();
+  if (!urgent.length) return;
+  const overdue = urgent.filter(i => i.urg === 'overdue');
+  const title = overdue.length
+    ? `${overdue.length} item${overdue.length>1?'s':''} overdue`
+    : 'Time to stock up';
+  const body = urgent.map(i => i.name).join(', ');
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    reg.showNotification(title, { body, icon: 'icons/icon-192.png', tag: 'restock', renotify: true });
+  } catch (_) {
+    new Notification(title, { body, icon: 'icons/icon-192.png' });
+  }
+}
+
+function checkNotificationTime() {
+  if (!state.notifyEnabled || Notification.permission !== 'granted') return;
+  const today = new Date().toISOString().slice(0, 10);
+  if (state.lastNotifiedDate === today) return;
+  const [h, m] = (state.notifyTime || '09:00').split(':').map(Number);
+  const now = new Date();
+  const target = new Date(); target.setHours(h, m, 0, 0);
+  if (now >= target) {
+    fireSmartNotification();
+    state.lastNotifiedDate = today;
+    save();
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+
+updatePill(); renderReminders(); renderNotifSection();
+setInterval(checkNotificationTime, 60000);
+checkNotificationTime();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
